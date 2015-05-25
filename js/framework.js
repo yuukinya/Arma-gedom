@@ -1,9 +1,11 @@
-var weaponsDb = {
+ï»¿var weaponsDb = {
 	0: {
 		name: 'Faca',
 		description: 'Faca simples de combate',
-		image: '',
+		image: 'Knife-icon.png',
 		weight: 0.3,
+		reloadTime: 0,
+		maxAmmo: 0,
 		uses: {
 			0: {
 				name: 'Ataque Leve',
@@ -24,10 +26,11 @@ var weaponsDb = {
 	1: {
 		name: 'Pistola',
 		description: 'Pistola nova de fabrica',
-		image: '',
+		image: 'Pistol-icon.png',
 		weight: 0.6,
 		maxAmmo: 100,
 		maxExtraAmmo: 300,
+		reloadTime: 3,
 		uses: {
 			0: {
 				name: 'Tiro Comum',
@@ -60,7 +63,7 @@ var repository = {
 	},
 	placeWeapon: function(weapon) {
 		if (this.currentWeight() + weapon.weight > this.weightLimit) {
-			console.log('O container não suporta o peso da arma.');
+			console.log('O container nÃ£o suporta o peso da arma.');
 			return;
 		}
 	},
@@ -79,93 +82,100 @@ function weapon() {
 		uses: {},
 		maxAmmo: 0,
 		ammo: 0,
+		reloadTime: 0,
 		maxExtraAmmo: 0,
 		extraAmmo: 0
 	};
-	
-	self.setWeapon = function (name, desc, image, weight, uses, maxAmmo, maxExtraAmmo) {
-		self.info = {
+
+	self.setWeapon = function (name, desc, image, weight, uses, maxAmmo, maxExtraAmmo, reload) {
+		var newInfo = {
 			name: name,
 			description: desc,
 			image: image,
 			weight: weight,
 			uses: uses,
 			maxAmmo: maxAmmo,
-			maxExtraAmmo: maxExtraAmmo
+			maxExtraAmmo: maxExtraAmmo,
+			reloadTime: reload
 		};
+		
+		$.extend(self.info, newInfo );
 	};
 
 	self.loadWeapon = function (dbSlot) {
 		var w = weaponsDb[dbSlot];
-		self.setWeapon(w.name, w.description, w.image, w.weight, w.uses, w.maxAmmo, w.maxExtraAmmo);
+		self.setWeapon(w.name, w.description, w.image, w.weight, w.uses, w.maxAmmo, w.maxExtraAmmo, w.reloadTime);
 	};
 
 	self.fire = function (attack) {
-		if (!self.info.uses) {
-			console.log('Arma inexistente ou sem uso requerido.');
-			return;
-		}
+		if (!self.info.uses)
+			return {status: 0, message: 'Arma inexistente ou sem uso requerido'};
 
 		//Verifica se nescessita de balas
 		var ammoDown = 0;
 		if (self.info.maxAmmo > 0) {
 			//Se possui balas o suficiente
-			if (self.info.ammo < self.info.uses[attack].bullets) {
-				console.log('A arma precisa ser recarregada');
-				return;
-			}
+			if (self.info.ammo < self.info.uses[attack].bullets)
+                return {status: 0, message: 'A arma precisa ser recarregada'};
 
 			ammoDown = self.info.uses[attack].bullets;
 		}
 
-		console.log('Ataque usado: ' + self.info.uses[attack].name);
 		if (ammoDown) {
 			self.info.ammo -= ammoDown;
-			console.log('Balas restantes: ' + self.info.ammo);
 		}
+
+        //Metodo aleatÃ³rio de escolha de dano
+        var rand = ((Math.random() * (3 - 0) + 0) | 0);
+        var dmg = 0;
+        if (rand === 0)
+            dmg = self.info.uses[attack].minDmg;
+        if (rand === 1)
+            dmg = self.info.uses[attack].medDmg;
+        if (rand === 2)
+            dmg = self.info.uses[attack].maxDmg;
+        
+        return {
+            status: 1,
+            message: 'Ataque usado: ' + self.info.uses[attack].name + ', Dano causado: ' + dmg + '%',
+            delay: self.info.uses[attack].delay
+        }
 	};
 
 	self.reload = function () {
-		if (!self.info.maxAmmo) {
-			console.log('A arma não nescessita de balas');
-			return;
-		}
+		if (!self.info.maxAmmo)
+            return {status: 0, message: 'A arma nÃ£o nescessita de balas'};
 
-		if (self.info.maxAmmo == self.info.ammo) {
-			console.log('A arma já esta totalmente carregada');
-			return;
-		}
+		if (self.info.maxAmmo == self.info.ammo)
+            return {status: 0, message: 'A arma jÃ¡ esta totalmente carregada'};
 
-		if (!self.info.extraAmmo) {
-			console.log('Não existem balas extras para serem recarregadas');
-			return;
-		}
+		if (!self.info.extraAmmo)
+            return {status: 0, message: 'NÃ£o existem balas extras para serem recarregadas'};
 
-		var reloadAmount = (self.info.extraAmmo >= self.info.maxAmmo) ?
-							self.info.maxAmmo :
-							self.info.extraAmmo;
+		var reloadAmount = (self.info.extraAmmo >= self.info.maxAmmo)
+						 ? self.info.maxAmmo
+						 : self.info.extraAmmo;
 
-		self.info.ammo = reloadAmount;
+		//verifica se a quantidade de balas atual + a quantidade a ser carregada Ã© maior q o compartimanto
+		if (self.info.ammo + reloadAmount > self.info.maxAmmo)
+			reloadAmount = (self.info.maxAmmo - self.info.ammo);
+		
+		self.info.ammo += reloadAmount;
+
 		self.info.extraAmmo -= reloadAmount;
 
-		console.log(self.info.ammo, self.info.extraAmmo);
+		if (self.info.reloadTime)
+			setTimeout(function () {}, (1000 * self.info.reloadTime));
+
+        return {status: 1, message: 'A arma foi recarregada'};
 	};
 
 	self.restockExtraAmmo = function (ammount) {
-		if (!self.info.maxExtraAmmo) {
-			console.log('Essa arma não tem supporte a munição extra');
-			return;
-		}
+		if (!self.info.maxExtraAmmo)
+            return {status: 0, message: 'Essa arma nÃ£o tem supporte a muniÃ§Ã£o extra'};
 
 		self.info.extraAmmo = (ammount >= self.info.maxExtraAmmo) ? self.info.maxExtraAmmo : ammount;
 	};
 
 	return this;
 }
-
-// weapon.loadWeapon(1)
-// weapon.fire(0);
-// weapon.reload();
-// weapon.restockExtraAmmo(35);
-// weapon.reload();
-// weapon.fire(0);
