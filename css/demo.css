@@ -1,0 +1,26 @@
+body {
+  padding-top: 50px;
+}
+
+.wp-action {
+	width: 100%;
+	min-height: 20px;
+	background: #ddd;
+	border: 1px solid #ccc;
+	border-radius: 6px;
+	padding: 8px;
+}
+
+.weapon-container {
+	width: 100%;
+	min-height: 20px;
+	background: #ddd;
+	border: 1px solid #ccc;
+	border-radius: 6px;
+}
+
+.wc-container {padding: 8px;}
+
+#weapon-info p {
+	margin-bottom: 2px;
+}
